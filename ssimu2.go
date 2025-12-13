@@ -87,17 +87,11 @@ func (handler *SSIMU2Handler) ComputeScore(sourceData, distortedData [3][]byte,
 // After calling Close, the handler should no longer be used. Returns an
 // ExceptionCode indicating whether the operation succeeded.
 func (handler *SSIMU2Handler) Close() ExceptionCode {
-	if handler.ptr != nil {
-		defer func() {
-			C.free(unsafe.Pointer(handler))
-			handler.ptr = nil
-
-		}()
-	}
-	if handler.init {
+	if handler.ptr != nil && handler.init {
 		handler.init = false
-		return ExceptionCode(C.Vship_SSIMU2Free(*handler.ptr))
+		code := ExceptionCode(C.Vship_SSIMU2Free(*handler.ptr))
+		handler.ptr = nil
+		return code
 	}
-
 	return ExceptionCodeNoError
 }
