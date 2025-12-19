@@ -64,8 +64,8 @@ func initCLI() ComparatorConfig {
 	flag.StringVar(&logLevelStr, "loglevel", "info", "log level: error, info, debug")
 	flag.IntVar(&cfg.ButteraugliQNorm, "butter-qnorm", 5, "Butteraugli quantization normalization value")
 	flag.Float64Var(&cfg.DisplayBrightness, "display-nits", 203, "display peak brightness in nits (for CVVDP and Butteraugli Only)")
-	flag.BoolVar(&cfg.CVVDPUseTemporalScore, "cvvdp-temporal", true, "use temporal score (for CVVDP)")
-	flag.BoolVar(&cfg.CVVDPResizeToDisplay, "cvvdp-resize", true, "resize video to display resolution (for CVVDP Only)")
+	flag.BoolVar(&cfg.CVVDPUseTemporalScore, "cvvdp-disable-temporal", false, "use temporal score (for CVVDP)")
+	flag.BoolVar(&cfg.CVVDPResizeToDisplay, "cvvdp-disable-resize", false, "resize video to display resolution (for CVVDP Only)")
 	flag.IntVar(&cfg.DisplayWidth, "display-width", 3840, "specify the displays horizontal resolution (for CVVDP Only)")
 	flag.IntVar(&cfg.DisplayHeight, "display-height", 2160, "specify the displays horizontal resolution (for CVVDP Only)")
 	flag.Float64Var(&cfg.DisplayDiagonal, "display-diagonal", 32, "specify the displays size from the top left to bottom right (for CVVDP Only)")
@@ -75,9 +75,8 @@ func initCLI() ComparatorConfig {
 
 	flag.Parse()
 
-	if cfg.CVVDPUseTemporalScore {
-		cfg.WorkerCount = 1
-	}
+	cfg.CVVDPUseTemporalScore = !cfg.CVVDPUseTemporalScore
+	cfg.CVVDPResizeToDisplay = !cfg.CVVDPResizeToDisplay
 
 	if cfg.VideoAPath == "" || cfg.VideoBPath == "" {
 		fmt.Println("Error: both -a and -b are required")
@@ -99,6 +98,10 @@ func initCLI() ComparatorConfig {
 
 	cfg.Metrics = strings.Split(metricsFlag, ",")
 	for i, m := range cfg.Metrics {
+		if cfg.CVVDPUseTemporalScore && m == "cvvdp" {
+			cfg.WorkerCount = 1
+		}
+
 		cfg.Metrics[i] = strings.TrimSpace(m)
 	}
 
@@ -130,7 +133,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	printSummary(vc.FinalScores())
+	printSummary(vc.FinalScores(), &cfg)
 }
 
 func prettyMap[K comparable, V any](m map[K]V) string {

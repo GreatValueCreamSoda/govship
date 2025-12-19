@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func printSummary(scores map[string][]float64) {
+func printSummary(scores map[string][]float64, cfg *ComparatorConfig) {
 	if len(scores) == 0 {
 		fmt.Println("No scores to report")
 		return
@@ -29,11 +29,19 @@ func printSummary(scores map[string][]float64) {
 		if len(values) == 0 {
 			continue
 		}
-		printMetricSummary(name, values)
+		printMetricSummary(name, values, cfg)
 	}
 }
 
-func printMetricSummary(name string, values []float64) {
+func printMetricSummary(name string, values []float64, cfg *ComparatorConfig) {
+	if name == "cvvdp" && cfg.CVVDPUseTemporalScore {
+		fmt.Println()
+		fmt.Println(name)
+		fmt.Println(strings.Repeat("-", len(name)))
+		fmt.Printf("Score: %.6f\n", values[len(values)-1])
+		return
+	}
+
 	n := len(values)
 
 	sorted := make([]float64, n)
