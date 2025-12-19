@@ -138,37 +138,37 @@ func NewCVVDPHandler(numWorkers int, colorA, colorB *vship.Colorspace,
 	handler.pool = NewBlockingPool[*vship.CVVDPHandler](numWorkers)
 	handler.useTemporal = cfg.CVVDPUseTemporalScore
 
+	var displayModel vship.DisplayModel
+	displayModel.Name = "Custom"
+	displayModel.ColorSpace = vship.DisplayModelColorspaceHDR
+	displayModel.DisplayWidth = cfg.DisplayWidth
+	displayModel.DisplayHeight = cfg.DisplayHeight
+	displayModel.DisplayMaxLuminance = float32(cfg.DisplayBrightness)
+	displayModel.DisplayDiagonalSizeInches = float32(cfg.DisplayDiagonal)
+	displayModel.ViewingDistanceMeters = float32(cfg.ViewingDistance)
+	displayModel.MonitorContrastRatio = cfg.MonitorContrastRatio
+	displayModel.AmbientLightLevel = cfg.RoomBrightness
+	displayModel.AmbientLightReflectionOnDisplay = 0.005
+	displayModel.Exposure = 1
+
+	tmp, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		tmp.Close()
+		os.Remove(tmp.Name())
+	}()
+
+	err = vship.DisplayModelsToCVVDPJSONFile([]vship.DisplayModel{displayModel},
+		tmp.Name())
+	if err != nil {
+		return nil, err
+	}
+
 	for range numWorkers {
 		var vsHandler *vship.CVVDPHandler
 		var code vship.ExceptionCode
-
-		var displayModel vship.DisplayModel
-		displayModel.Name = "Custom"
-		displayModel.ColorSpace = vship.DisplayModelColorspaceHDR
-		displayModel.DisplayWidth = cfg.DisplayWidth
-		displayModel.DisplayHeight = cfg.DisplayHeight
-		displayModel.DisplayMaxLuminance = float32(cfg.DisplayBrightness)
-		displayModel.DisplayDiagonalSizeInches = float32(cfg.DisplayDiagonal)
-		displayModel.ViewingDistanceMeters = float32(cfg.ViewingDistance)
-		displayModel.MonitorContrastRatio = cfg.MonitorContrastRatio
-		displayModel.AmbientLightLevel = cfg.RoomBrightness
-		displayModel.AmbientLightReflectionOnDisplay = 0.005
-		displayModel.Exposure = 1
-
-		tmp, err := os.CreateTemp("", "")
-		if err != nil {
-			return nil, err
-		}
-		defer func() {
-			tmp.Close()
-			os.Remove(tmp.Name())
-		}()
-
-		err = vship.DisplayModelsToCVVDPJSONFile([]vship.DisplayModel{displayModel},
-			tmp.Name())
-		if err != nil {
-			return nil, err
-		}
 
 		vsHandler, code = vship.NewCVVDPHandlerWithConfig(
 			colorA, colorB, 24, cfg.CVVDPResizeToDisplay, "Custom", tmp.Name())
