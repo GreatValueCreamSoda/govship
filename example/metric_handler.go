@@ -133,45 +133,21 @@ func (h *CVVDPHandler) Name() string { return "cvvdp" }
 
 func NewCVVDPHandler(numWorkers int, colorA, colorB *vship.Colorspace,
 	cfg *ComparatorConfig) (*CVVDPHandler, error) {
-
 	var handler CVVDPHandler
 	handler.pool = NewBlockingPool[*vship.CVVDPHandler](numWorkers)
-	handler.useTemporal = cfg.CVVDPUseTemporalScore
 
-	var displayModel vship.DisplayModel
-	displayModel.Name = "Custom"
-	displayModel.ColorSpace = vship.DisplayModelColorspaceHDR
-	displayModel.DisplayWidth = cfg.DisplayWidth
-	displayModel.DisplayHeight = cfg.DisplayHeight
-	displayModel.DisplayMaxLuminance = float32(cfg.DisplayBrightness)
-	displayModel.DisplayDiagonalSizeInches = float32(cfg.DisplayDiagonal)
-	displayModel.ViewingDistanceMeters = float32(cfg.ViewingDistance)
-	displayModel.MonitorContrastRatio = cfg.MonitorContrastRatio
-	displayModel.AmbientLightLevel = cfg.RoomBrightness
-	displayModel.AmbientLightReflectionOnDisplay = 0.005
-	displayModel.Exposure = 1
-
-	tmp, err := os.CreateTemp("", "")
+	path, err := handler.createJsonConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		tmp.Close()
-		os.Remove(tmp.Name())
-	}()
-
-	err = vship.DisplayModelsToCVVDPJSONFile([]vship.DisplayModel{displayModel},
-		tmp.Name())
-	if err != nil {
-		return nil, err
-	}
+	defer os.Remove(path)
 
 	for range numWorkers {
 		var vsHandler *vship.CVVDPHandler
 		var code vship.ExceptionCode
 
 		vsHandler, code = vship.NewCVVDPHandlerWithConfig(
-			colorA, colorB, 24, cfg.CVVDPResizeToDisplay, "Custom", tmp.Name())
+			colorA, colorB, 24, cfg.CVVDPResizeToDisplay, "Custom", path)
 
 		if !code.IsNone() {
 			handler.Close()
@@ -185,6 +161,35 @@ func NewCVVDPHandler(numWorkers int, colorA, colorB *vship.Colorspace,
 	return &handler, nil
 }
 
+func (CVVDPHandler) createJsonConfig(cfg *ComparatorConfig) (string, error) {
+	var displayModel vship.DisplayModel
+	displayModel.Name = "Custom"
+	displayModel.ColorSpace = vship.DisplayModelColorspaceHDR
+	displayModel.DisplayWidth = cfg.DisplayWidth
+	displayModel.DisplayHeight = cfg.DisplayHeight
+	displayModel.DisplayMaxLuminance = float32(cfg.DisplayBrightness)
+	displayModel.DisplayDiagonalSizeInches = float32(cfg.DisplayDiagonal)
+	displayModel.ViewingDistanceMeters = float32(cfg.ViewingDistance)
+	displayModel.MonitorContrastRatio = cfg.MonitorContrastRatio
+	displayModel.AmbientLightLevel = cfg.RoomBrightness
+	displayModel.AmbientLightReflectionOnDisplay = 0.005
+	displayModel.Exposure = 1
+
+	tmp, e := os.CreateTemp("", "")
+	if e != nil {
+		return "", e
+	}
+	defer tmp.Close()
+
+	e = vship.DisplayModelsToCVVDPJSONFile([]vship.DisplayModel{displayModel},
+		tmp.Name())
+	if e != nil {
+		return "", e
+	}
+
+	return tmp.Name(), nil
+}
+
 func (h *CVVDPHandler) Close() {
 	for _, handler := range h.handlerList {
 		if handler != nil {
@@ -194,8 +199,7 @@ func (h *CVVDPHandler) Close() {
 	h.handlerList = nil
 }
 
-func (h *CVVDPHandler) Compute(a, b *frame) (map[string]float64,
-	error) {
+func (h *CVVDPHandler) Compute(a, b *frame) (map[string]float64, error) {
 	handler := h.pool.Get()
 	defer h.pool.Put(handler)
 
@@ -203,29 +207,36 @@ func (h *CVVDPHandler) Compute(a, b *frame) (map[string]float64,
 	var score float64
 
 	if h.useTemporal {
-		score, code = handler.ComputeScore(nil, 0, a.data, b.data, a.lineSize,
-			b.lineSize)
+		goto Temporal
 	} else {
-		// Spatial-only mode: reset accumulated score, compute only current
-		// frame
-		code = handler.Reset()
-		if !code.IsNone() {
-			return nil, fmt.Errorf("cvvdp Reset failed: %w", code.GetError())
-		}
-		code = handler.ResetScore()
-		if !code.IsNone() {
-			return nil, fmt.Errorf("cvvdp ResetScore failed: %w",
-				code.GetError())
-		}
-		score, code = handler.ComputeScore(nil, 0, a.data, b.data, a.lineSize,
-			b.lineSize)
+		goto Spatial
 	}
+
+Temporal:
+	score, code = handler.ComputeScore(nil, 0, a.data, b.data, a.lineSize,
+		b.lineSize)
+	goto End
+
+Spatial:
+	// Spatial-only mode: reset accumulated score, compute only current
+	// frame
+	code = handler.Reset()
+	if !code.IsNone() {
+		return nil, fmt.Errorf("cvvdp Reset failed: %w", code.GetError())
+	}
+	code = handler.ResetScore()
+	if !code.IsNone() {
+		return nil, fmt.Errorf("cvvdp ResetScore failed: %w", code.GetError())
+	}
+	score, code = handler.ComputeScore(nil, 0, a.data, b.data, a.lineSize,
+		b.lineSize)
+	goto End
+
+End:
 
 	if !code.IsNone() {
 		return nil, fmt.Errorf("cvvdp Compute failed: %w", code.GetError())
 	}
 
-	return map[string]float64{
-		"cvvdp": score,
-	}, nil
+	return map[string]float64{"cvvdp": score}, nil
 }
