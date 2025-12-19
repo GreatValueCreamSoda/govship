@@ -4,14 +4,28 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 )
 
 func printSummary(scores map[string][]float64) {
+	if len(scores) == 0 {
+		fmt.Println("No scores to report")
+		return
+	}
+
 	fmt.Println()
 	fmt.Println("Metric summary")
-	fmt.Println("--------------")
+	fmt.Println("==============")
 
-	for name, values := range scores {
+	// stable order so output is deterministic
+	names := make([]string, 0, len(scores))
+	for name := range scores {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		values := scores[name]
 		if len(values) == 0 {
 			continue
 		}
@@ -20,11 +34,12 @@ func printSummary(scores map[string][]float64) {
 }
 
 func printMetricSummary(name string, values []float64) {
-	sorted := make([]float64, len(values))
+	n := len(values)
+
+	sorted := make([]float64, n)
 	copy(sorted, values)
 	sort.Float64s(sorted)
 
-	n := len(sorted)
 	min := sorted[0]
 	max := sorted[n-1]
 
@@ -32,64 +47,30 @@ func printMetricSummary(name string, values []float64) {
 	for _, v := range sorted {
 		sum += v
 	}
-	avg := float64(sum) / float64(n)
+	avg := sum / float64(n)
 
-	stats := map[string]func() string{
-		"count": func() string {
-			return fmt.Sprintf("%d", n)
-		},
-		"min": func() string {
-			return fmt.Sprintf("%f", min)
-		},
-		"max": func() string {
-			return fmt.Sprintf("%f", max)
-		},
-		"average": func() string {
-			return fmt.Sprintf("%.3f", avg)
-		},
-		"median": func() string {
-			if n%2 == 0 {
-				return fmt.Sprintf(
-					"%.3f",
-					float64(sorted[n/2-1]+sorted[n/2])/2.0,
-				)
-			}
-			return fmt.Sprintf("%.3f", float64(sorted[n/2]))
-		},
-		"stddev": func() string {
-			var variance float64
-			for _, v := range sorted {
-				d := float64(v) - avg
-				variance += d * d
-			}
-			variance /= float64(n)
-			return fmt.Sprintf("%.3f", math.Sqrt(variance))
-		},
-		"p5": func() string {
-			i := int(math.Round(0.05 * float64(n-1)))
-			return fmt.Sprintf("%.3f", float64(sorted[i]))
-		},
-		"p95": func() string {
-			i := int(math.Round(0.95 * float64(n-1)))
-			return fmt.Sprintf("%.3f", float64(sorted[i]))
-		},
-	}
-
-	maxLabel := 0
-	for label := range stats {
-		if len(label) > maxLabel {
-			maxLabel = len(label)
+	median := func() float64 {
+		if n%2 == 0 {
+			return (sorted[n/2-1] + sorted[n/2]) / 2.0
 		}
-	}
+		return sorted[n/2]
+	}()
 
-	fmt.Println(name)
-	for label, fn := range stats {
-		fmt.Printf(
-			"  %*s : %10s\n",
-			maxLabel,
-			label,
-			fn(),
-		)
+	var variance float64
+	for _, v := range sorted {
+		d := v - avg
+		variance += d * d
 	}
+	variance /= float64(n)
+	stddev := math.Sqrt(variance)
+
 	fmt.Println()
+	fmt.Println(name)
+	fmt.Println(strings.Repeat("-", len(name)))
+
+	fmt.Printf("  min     : %.6f\n", min)
+	fmt.Printf("  max     : %.6f\n", max)
+	fmt.Printf("  average : %.6f\n", avg)
+	fmt.Printf("  median  : %.6f\n", median)
+	fmt.Printf("  stddev  : %.6f\n", stddev)
 }

@@ -8,8 +8,8 @@ import (
 )
 
 func Test_DisplayModelsToCVVDPJSON_Print(t *testing.T) {
-	models := map[string]vship.DisplayModel{
-		"new_Display_Name": {
+	models := []vship.DisplayModel{
+		{
 			Name:                            "My HDR Monitor",
 			ColorSpace:                      vship.DisplayModelColorspaceHDR,
 			DisplayWidth:                    3840,
@@ -22,7 +22,7 @@ func Test_DisplayModelsToCVVDPJSON_Print(t *testing.T) {
 			AmbientLightReflectionOnDisplay: 0.01,
 			Exposure:                        1.0,
 		},
-		"standard_fhd": {
+		{
 			Name:       "override default colorspace for standard_fhd display",
 			ColorSpace: vship.DisplayModelColorspaceSDR,
 		},

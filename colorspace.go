@@ -3,6 +3,7 @@ package govship
 // #include <VshipColor.h>
 // #include <stdint.h>
 import "C"
+import "fmt"
 
 // SamplingFormat describes how pixel values are stored in memory. any non
 // whole byte value is rounded up to a whole byte. EX: Uint10 is represented
@@ -117,6 +118,27 @@ type Colorspace struct {
 	ColorTransfer                            ColorTransfer
 	ColorPrimaries                           ColorPrimaries
 	CropTop, CropBottom, CropLeft, CropRight int
+}
+
+// Method to print all fields with names
+func (c Colorspace) Print() {
+	fmt.Printf("Width: %d\n", c.Width)
+	fmt.Printf("Height: %d\n", c.Height)
+	fmt.Printf("TargetWidth: %d\n", c.TargetWidth)
+	fmt.Printf("TargetHeight: %d\n", c.TargetHeight)
+	fmt.Printf("SamplingFormat: %v\n", c.SamplingFormat)
+	fmt.Printf("ColorRange: %v\n", c.ColorRange)
+	fmt.Printf("ChromaSubsamplingWidth: %d\n", c.ChromaSubsamplingWidth)
+	fmt.Printf("ChromaSubsamplingHeight: %d\n", c.ChromaSubsamplingHeight)
+	fmt.Printf("ChromaLocation: %v\n", c.ChromaLocation)
+	fmt.Printf("ColorFamily: %v\n", c.ColorFamily)
+	fmt.Printf("ColorMatrix: %v\n", c.ColorMatrix)
+	fmt.Printf("ColorTransfer: %v\n", c.ColorTransfer)
+	fmt.Printf("ColorPrimaries: %v\n", c.ColorPrimaries)
+	fmt.Printf("CropTop: %d\n", c.CropTop)
+	fmt.Printf("CropBottom: %d\n", c.CropBottom)
+	fmt.Printf("CropLeft: %d\n", c.CropLeft)
+	fmt.Printf("CropRight: %d\n", c.CropRight)
 }
 
 // toC converts the Go Colorspace into the underlying Vship C struct.

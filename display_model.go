@@ -1,6 +1,10 @@
 package govship
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
 
 // DisplayModelColorspace describes the perceptual colorspace a display
 // operates in from CVVDP’s point of view.
@@ -163,10 +167,15 @@ type cvvdpDisplayJSON struct {
 // resulting JSON can be written directly to disk and passed to
 // NewCVVDPHandlerWithConfig as a custom display model configuration file for
 // custom display model presets.
-func DisplayModelsToCVVDPJSON(models map[string]DisplayModel) ([]byte, error) {
+func DisplayModelsToCVVDPJSON(models []DisplayModel) ([]byte, error) {
 	out := make(map[string]cvvdpDisplayJSON)
 
-	for key, m := range models {
+	for i, m := range models {
+		key := m.Name
+		if key == "" {
+			// fallback if Name is empty
+			key = fmt.Sprintf("display-%d", i)
+		}
 		out[key] = cvvdpDisplayJSON{
 			Name:                  m.Name,
 			ColorSpace:            string(m.ColorSpace),
@@ -183,4 +192,16 @@ func DisplayModelsToCVVDPJSON(models map[string]DisplayModel) ([]byte, error) {
 	}
 
 	return json.MarshalIndent(out, "", "    ")
+}
+
+// DisplayModelsToCVVDPJSONFile writes a set of DisplayModel definitions
+// directly to a JSON file at the given path. Returns an error if marshalling
+// or writing fails.
+func DisplayModelsToCVVDPJSONFile(models []DisplayModel, filePath string,
+) error {
+	data, err := DisplayModelsToCVVDPJSON(models)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, data, 0644)
 }
