@@ -274,19 +274,19 @@ func (vc *VideoComparator) initPools() {
 // buffers, and handles errors/cancellation
 func (vc *VideoComparator) readVideo(ctx context.Context, ov openedVideo,
 	startIdx int, pool *sync.Pool, out chan<- *frame) {
-	logf(logInfo, "Starting video read from index %d", startIdx)
+	logf(LogInfo, "Starting video read from index %d", startIdx)
 
 	for i := 0; i < vc.numFrames; i++ {
 		if ctx.Err() != nil {
 			vc.errs <- ctx.Err()
-			logf(logError, "Video read canceled at frame %d: %v", i, ctx.Err())
+			logf(LogError, "Video read canceled at frame %d: %v", i, ctx.Err())
 			return
 		}
 
 		src, _, err := ov.video.GetFrame(startIdx + i)
 		if err != nil {
 			vc.errs <- err
-			logf(logError, "Error reading frame %d: %v", startIdx+i, err)
+			logf(LogError, "Error reading frame %d: %v", startIdx+i, err)
 			return
 		}
 
@@ -298,28 +298,28 @@ func (vc *VideoComparator) readVideo(ctx context.Context, ov openedVideo,
 
 		select {
 		case out <- buf:
-			logf(logDebug, "Read frame %d successfully", startIdx+i)
+			logf(LogDebug, "Read frame %d successfully", startIdx+i)
 		case <-ctx.Done():
 			pool.Put(buf)
 			vc.errs <- ctx.Err()
-			logf(logError, "Video read context canceled at frame %d",
+			logf(LogError, "Video read context canceled at frame %d",
 				startIdx+i)
 			return
 		}
 	}
-	logf(logInfo, "Finished reading video starting at index %d", startIdx)
+	logf(LogInfo, "Finished reading video starting at index %d", startIdx)
 }
 
 // pairFrames pairs frames from framesA and framesB channels and sends pairs to
 // the pairs channel. It assumes frames arrive in order and pairs them
 // sequentially.
 func (vc *VideoComparator) pairFrames(ctx context.Context) {
-	logf(logInfo, "Starting frame pairing")
+	logf(LogInfo, "Starting frame pairing")
 
 	for i := 0; i < vc.numFrames; i++ {
 		if ctx.Err() != nil {
 			vc.errs <- ctx.Err()
-			logf(logError, "Frame pairing canceled at index %d: %v", i,
+			logf(LogError, "Frame pairing canceled at index %d: %v", i,
 				ctx.Err())
 			return
 		}
@@ -335,16 +335,16 @@ func (vc *VideoComparator) pairFrames(ctx context.Context) {
 
 		select {
 		case vc.pairs <- pair:
-			logf(logDebug, "Paired frame %d (A:%d, B:%d)", i, pair.aIdx,
+			logf(LogDebug, "Paired frame %d (A:%d, B:%d)", i, pair.aIdx,
 				pair.bIdx)
 		case <-ctx.Done():
 			vc.errs <- ctx.Err()
-			logf(logError, "Frame pairing context canceled at index %d", i)
+			logf(LogError, "Frame pairing context canceled at index %d", i)
 			return
 		}
 	}
 
-	logf(logInfo, "Finished pairing %d frames", vc.numFrames)
+	logf(LogInfo, "Finished pairing %d frames", vc.numFrames)
 }
 
 // metricWorker processes frame pairs from the pairs channel, computes metrics,
@@ -352,7 +352,7 @@ func (vc *VideoComparator) pairFrames(ctx context.Context) {
 // processing. On error, sends to errs and skips sending results. Recycles
 // frames back to pools after processing.
 func (vc *VideoComparator) metricWorker(ctx context.Context, workerID int) {
-	logf(logInfo, "Metric worker thread %d starting", workerID)
+	logf(LogInfo, "Metric worker thread %d starting", workerID)
 
 	for pair := range withContext(ctx, vc.pairs) {
 		scores := vc.computeMetrics(pair, workerID)
@@ -364,16 +364,16 @@ func (vc *VideoComparator) metricWorker(ctx context.Context, workerID int) {
 		// Return frames.
 		vc.framePoolA.Put(pair.a)
 		vc.framePoolB.Put(pair.b)
-		logf(logDebug, "Worker %d computed scores for frame %d: %s",
+		logf(LogDebug, "Worker %d computed scores for frame %d: %s",
 			workerID, pair.index, prettyMap(scores))
 	}
 
 	if ctx.Err() != nil {
 		vc.errs <- ctx.Err()
-		logf(logError, "Worker %d exiting due to context cancellation: %v",
+		logf(LogError, "Worker %d exiting due to context cancellation: %v",
 			workerID, ctx.Err())
 	} else {
-		logf(logInfo, "Worker %d finished", workerID)
+		logf(LogInfo, "Worker %d finished", workerID)
 	}
 }
 
@@ -390,12 +390,12 @@ func (vc *VideoComparator) computeMetrics(pair framePair, workerID int,
 		if err != nil {
 			vc.errs <- fmt.Errorf("metric %s worker %d: %w", m.Name(),
 				workerID, err)
-			logf(logError, "Metric %s computation failed on worker %d, frame "+
+			logf(LogError, "Metric %s computation failed on worker %d, frame "+
 				" %d: %v", m.Name(), workerID, pair.index, err)
 			return nil
 		}
 		maps.Copy(scores, vals)
-		logf(logDebug, "Worker %d metric %s scores for frame %d: %s", workerID,
+		logf(LogDebug, "Worker %d metric %s scores for frame %d: %s", workerID,
 			m.Name(), pair.index, prettyMap(vals))
 	}
 
@@ -410,7 +410,7 @@ func (vc *VideoComparator) aggregateResults(ctx context.Context) {
 	if vc.finalMetricScores == nil {
 		vc.finalMetricScores = make(map[string][]float64)
 	}
-	logf(logInfo, "Starting aggregation of results")
+	logf(LogInfo, "Starting aggregation of results")
 
 	for res := range withContext(ctx, vc.results) {
 		for name, val := range res.scores {
@@ -419,10 +419,10 @@ func (vc *VideoComparator) aggregateResults(ctx context.Context) {
 				vc.finalMetricScores[name] = make([]float64, vc.numFrames)
 			}
 			vc.finalMetricScores[name][res.index] = val
-			logf(logDebug, "Aggregated result for metric %s frame %d: %f",
+			logf(LogDebug, "Aggregated result for metric %s frame %d: %f",
 				name, res.index, val)
 		}
 	}
 
-	logf(logInfo, "Finished aggregating results")
+	logf(LogInfo, "Finished aggregating results")
 }
