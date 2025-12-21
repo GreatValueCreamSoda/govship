@@ -183,6 +183,9 @@ func (vc *VideoComparator) Run(ctx context.Context) error {
 	done := make(chan struct{})
 	go func() {
 		metricWg.Wait()
+		for _, i := range vc.metrics {
+			i.Close()
+		}
 		close(vc.results)
 		close(done)
 	}()
@@ -206,6 +209,7 @@ func (vc *VideoComparator) Run(ctx context.Context) error {
 		aggWg.Wait()
 		return nil
 	}
+
 }
 
 // initChannels initializes the communication channels with appropriate

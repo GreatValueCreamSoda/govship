@@ -7,22 +7,25 @@ import (
 )
 
 type ComparatorConfig struct {
-	VideoAPath, VideoBPath      string
-	AStartIdx, BStartIdx        int
-	MaxFrames                   int
-	WorkerCount                 int
-	Metrics                     []string
-	ButteraugliQNorm            int
-	DisplayBrightness           float64
-	CVVDPUseTemporalScore       bool
-	CVVDPResizeToDisplay        bool
-	DisplayWidth, DisplayHeight int
-	DisplayDiagonal             float64
-	ViewingDistance             float64
-	MonitorContrastRatio        int
-	RoomBrightness              int
-
-	outputDistortionMapToStdout bool
+	VideoAPath, VideoBPath           string
+	AStartIdx, BStartIdx             int
+	MaxFrames                        int
+	WorkerCount                      int
+	Metrics                          []string
+	ButteraugliQNorm                 int
+	DisplayBrightness                float64
+	CVVDPUseTemporalScore            bool
+	CVVDPResizeToDisplay             bool
+	DisplayWidth, DisplayHeight      int
+	DisplayDiagonal                  float64
+	ViewingDistance                  float64
+	MonitorContrastRatio             int
+	RoomBrightness                   int
+	ButteraugliDistMapVideo          string
+	CVVDPDistMapVideo                string
+	ButteraugliMaxDistortionClipping float32
+	CVVDPMaxDistortionClipping       float32
+	DistortionMapEncoderSettings     []string
 }
 
 func (c *ComparatorConfig) Validate() error {
@@ -149,8 +152,7 @@ func (c *ComparatorConfig) BuildMetric(colorA, colorB *vship.Colorspace,
 	case "butter":
 		logf(LogInfo, "Creating Butteraugli handler (QNorm=%d, Display"+
 			"Brightness=%.2f)", c.ButteraugliQNorm, c.DisplayBrightness)
-		m, err := NewButterHandler(c.WorkerCount, colorA, colorB,
-			c.ButteraugliQNorm, float32(c.DisplayBrightness), c)
+		m, err := NewButterHandler(c.WorkerCount, colorA, colorB, c)
 		if err != nil {
 			logf(LogError, "Butteraugli handler creation failed: %v", err)
 			return nil, err

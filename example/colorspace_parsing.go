@@ -5,6 +5,8 @@ import (
 	vship "github.com/GreatValueCreamSoda/govship"
 )
 
+// Does nothing but convert a ffms2 frame data into a vship.Colorspace
+
 func getVideoColorspace(video *openedVideo) (vship.Colorspace, error) {
 	logf(LogInfo, "Determining colorspace from video properties")
 
