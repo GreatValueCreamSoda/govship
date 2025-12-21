@@ -41,7 +41,8 @@ func NewCVVDPHandler(numWorkers int, colorA, colorB *vship.Colorspace,
 	}
 
 	h.ffmpegCmd, err = newFFmpegHeatmap(h.width, h.height, 25,
-		cfg.DistortionMapEncoderSettings, cfg.CVVDPDistMapVideo, 1)
+		cfg.DistortionMapEncoderSettings, cfg.CVVDPDistMapVideo,
+		float32(cfg.CVVDPMaxDistortionClipping))
 	if err != nil {
 		return nil, err
 	}

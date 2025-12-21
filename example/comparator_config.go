@@ -7,25 +7,27 @@ import (
 )
 
 type ComparatorConfig struct {
-	VideoAPath, VideoBPath           string
-	AStartIdx, BStartIdx             int
-	MaxFrames                        int
-	WorkerCount                      int
-	Metrics                          []string
-	ButteraugliQNorm                 int
-	DisplayBrightness                float64
-	CVVDPUseTemporalScore            bool
-	CVVDPResizeToDisplay             bool
-	DisplayWidth, DisplayHeight      int
-	DisplayDiagonal                  float64
-	ViewingDistance                  float64
-	MonitorContrastRatio             int
-	RoomBrightness                   int
+	VideoAPath, VideoBPath      string
+	AStartIdx, BStartIdx        int
+	MaxFrames                   int
+	WorkerCount                 int
+	Metrics                     []string
+	ButteraugliQNorm            int
+	DisplayBrightness           float64
+	CVVDPUseTemporalScore       bool
+	CVVDPResizeToDisplay        bool
+	DisplayWidth, DisplayHeight int
+	DisplayDiagonal             float64
+	ViewingDistance             float64
+	MonitorContrastRatio        int
+	RoomBrightness              int
+
 	ButteraugliDistMapVideo          string
 	CVVDPDistMapVideo                string
-	ButteraugliMaxDistortionClipping float32
-	CVVDPMaxDistortionClipping       float32
-	DistortionMapEncoderSettings     []string
+	ButteraugliMaxDistortionClipping float64
+	CVVDPMaxDistortionClipping       float64
+
+	DistortionMapEncoderSettings []string
 }
 
 func (c *ComparatorConfig) Validate() error {

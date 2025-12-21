@@ -39,7 +39,8 @@ func NewButterHandler(numWorkers int, colorA, colorB *vship.Colorspace,
 	}
 
 	h.ffmpegCmd, err = newFFmpegHeatmap(h.width, h.height, 25,
-		cfg.DistortionMapEncoderSettings, cfg.ButteraugliDistMapVideo, 15)
+		cfg.DistortionMapEncoderSettings, cfg.ButteraugliDistMapVideo,
+		float32(cfg.ButteraugliMaxDistortionClipping))
 	if err != nil {
 		return nil, err
 	}

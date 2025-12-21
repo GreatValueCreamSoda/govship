@@ -73,6 +73,9 @@ func initCLI() (ComparatorConfig, string) {
 	ButterFlags.SetOutput(io.Discard)
 	ButterFlags.IntVar(&cfg.ButteraugliQNorm, "butter-qnorm", 5,
 		"Butteraugli quantization normalization factor")
+	ButterFlags.Float64Var(&cfg.ButteraugliMaxDistortionClipping,
+		"butteraugli-clipping", 15,
+		"Save Butterauglis distortion map as a video")
 	ButterFlags.StringVar(&cfg.ButteraugliDistMapVideo, "butteraugli-video",
 		"", "Save Butterauglis distortion map as a video")
 	ButterFlags.Parse(os.Args[1:])
@@ -97,6 +100,8 @@ func initCLI() (ComparatorConfig, string) {
 		"Display contrast ratio")
 	CvvdpFlags.IntVar(&cfg.RoomBrightness, "room-lux", 100,
 		"Ambient room illumination in lux")
+	CvvdpFlags.Float64Var(&cfg.CVVDPMaxDistortionClipping, "cvvdp-clipping",
+		0.75, "Save Butterauglis distortion map as a video")
 	CvvdpFlags.StringVar(&cfg.CVVDPDistMapVideo, "cvvdp-video",
 		"", "Save CVVDPs distortion map as a video")
 	CvvdpFlags.Parse(os.Args[1:])
@@ -156,9 +161,6 @@ func initCLI() (ComparatorConfig, string) {
 		fmt.Fprintln(os.Stderr, "Error: -output cannot be a directory")
 		os.Exit(1)
 	}
-
-	fmt.Println(cfg.ButteraugliDistMapVideo)
-	fmt.Println(cfg.CVVDPDistMapVideo)
 
 	return cfg, outputPath
 }
